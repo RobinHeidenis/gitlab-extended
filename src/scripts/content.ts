@@ -1,7 +1,10 @@
 const { EMOJI, EMOJI_BG_COLOR, EMOJI_EMOJI, EMOJI_PLURAL, EMOJI_SVG } =
   loadConstants();
 
-const createEmojiSvg = () => {
+const GITLAB_EMOJI_ELEMENT = (classes = "", title = EMOJI) =>
+  `<gl-emoji data-name='${EMOJI}' data-unicode-version='6.0' title='${title}' class='${classes}'>${EMOJI_EMOJI}</gl-emoji>`;
+
+const createEmojiSvg = (color: string | null) => {
   const emojiSvg = document.createElementNS(
     "http://www.w3.org/2000/svg",
     "svg",
@@ -21,7 +24,9 @@ const createEmojiSvg = () => {
     "path",
   );
   emojiPath.setAttribute("d", EMOJI_SVG);
-  emojiPath.setAttribute("fill", EMOJI_BG_COLOR);
+  if (color) {
+    emojiPath.setAttribute("fill", color);
+  }
   emojiSvg.appendChild(emojiPath);
 
   return emojiSvg;
@@ -64,7 +69,7 @@ const addCollapseAllEmojisButtonToPage = () => {
     "gl-button",
   );
   collapseButton.type = "button";
-  collapseButton.innerHTML = `<span class='gl-button-text'>Collapse all ${EMOJI_PLURAL} <gl-emoji data-name='${EMOJI}' data-unicode-version='6.0' title='${EMOJI}' class='gl-ml-3'>${EMOJI_EMOJI}</gl-emoji></span>`;
+  collapseButton.innerHTML = `<span class='gl-button-text'>Collapse all ${EMOJI_PLURAL} ${GITLAB_EMOJI_ELEMENT("gl-ml-2")}</span>`;
   collapseButton.onclick = collapseIssuesWithEmoji;
 
   containerDiv?.prepend(collapseButton);
@@ -158,6 +163,67 @@ const addBadgeToEmojiCollapsedIssues = () => {
   }
 };
 
+const addButtonsToResolveIssues = (csrfToken: string) => {
+  const issues = document.querySelectorAll<HTMLLIElement>(
+    ".discussion-notes ul.notes li.note-comment:first-of-type",
+  );
+
+  for (const issue of issues) {
+    const button = document.createElement("button");
+    button.classList.add(
+      "btn",
+      "btn-default",
+      "btn-sm",
+      "btn-default-tertiary",
+      "btn-icon",
+      "note-action-button",
+      "gl-button",
+    );
+
+    const badgeIcon = createEmojiSvg(null);
+    badgeIcon.classList.add(
+      "gl-button-icon",
+      "gl-icon",
+      "s16",
+      "gl-fill-current",
+    );
+    button.appendChild(badgeIcon);
+    button.title = "Resolve (Gitlab Extended)";
+
+    const toggleEmojiUrl = issue.dataset.awardUrl;
+    if (!toggleEmojiUrl) {
+      continue;
+    }
+
+    button.onclick = async () => {
+      // Mark the issue as "resolved" by toggling the configured emoji
+      await fetch(toggleEmojiUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          "X-CSRF-Token": csrfToken,
+        },
+        body: JSON.stringify({
+          name: EMOJI,
+        }),
+      });
+
+      issue.setAttribute("data-discussion-resolved", "");
+      issue.setAttribute("data-collapsed-by", "gitlab-extended");
+
+      toggleResolvedBadge(issue as unknown as HTMLDivElement);
+      showTotalWithoutEmojis();
+    };
+
+    const firstActionButton = issue.querySelector(
+      "div.note-actions button.note-action-button",
+    );
+
+    firstActionButton?.insertAdjacentElement("beforebegin", button);
+  }
+};
+
 const toggleResolvedBadge = (issue: HTMLDivElement) => {
   const badge = document.createElement("span");
   badge.classList.add(
@@ -169,7 +235,7 @@ const toggleResolvedBadge = (issue: HTMLDivElement) => {
     "gl-ml-auto",
   );
 
-  const badgeIcon = createEmojiSvg();
+  const badgeIcon = createEmojiSvg(EMOJI_BG_COLOR);
   badgeIcon.classList.add("gl-badge-icon", "gl-icon");
   badgeIcon.style.width = "12px";
   badge.appendChild(badgeIcon);
@@ -198,6 +264,15 @@ const main = () => {
     setupClickEventListeners();
     collapseIssuesWithEmoji();
     addBadgeToEmojiCollapsedIssues();
+
+    const csrfToken = extractCsrfToken();
+    if (csrfToken) {
+      addButtonsToResolveIssues(csrfToken);
+    } else {
+      console.error(
+        "No CSRF token found, cannot add buttons to resolve issues",
+      );
+    }
   }, 3000);
 
   setTimeout(() => {
@@ -206,6 +281,19 @@ const main = () => {
 };
 
 main();
+
+function extractCsrfToken() {
+  const scripts = document.querySelectorAll("script");
+  for (let script of scripts) {
+    if (script.textContent?.includes("X-CSRF-Token")) {
+      const match = script.textContent.match(/"X-CSRF-Token"\s*:\s*"([^"]+)"/);
+      if (match) {
+        return match[1];
+      }
+    }
+  }
+  return null;
+}
 
 // Utilities and whatnot to load dynamic from local storage
 
