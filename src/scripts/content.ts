@@ -3,6 +3,9 @@ import { setupMROverview } from "./mr-overview";
 
 let MROVerviewSetup = false;
 
+// Firefox only
+let previousPathname = window.location.pathname;
+
 const setupNavigationListener = () => {
   if ("navigation" in window) {
     (window.navigation as any).addEventListener("navigate", (event: Event) => {
@@ -14,25 +17,14 @@ const setupNavigationListener = () => {
       }
     });
   } else {
-    let oldPushState = history.pushState;
-    history.pushState = function pushState() {
-      console.log(arguments);
-      let ret = oldPushState.apply(this, arguments as any);
-      window.dispatchEvent(new Event("locationchange"));
-      return ret;
-    };
-
-    let oldReplaceState = history.replaceState;
-    history.replaceState = function replaceState() {
-      console.log(arguments);
-      let ret = oldReplaceState.apply(this, arguments as any);
-      window.dispatchEvent(new Event("locationchange"));
-      return ret;
-    };
-
-    window.addEventListener("popstate", () => {
-      window.dispatchEvent(new Event("locationchange"));
-    });
+    setInterval(() => {
+      console.log("CHECKING");
+      if (window.location.pathname !== previousPathname) {
+        console.log("DIFFERENT");
+        window.dispatchEvent(new Event("locationchange"));
+        previousPathname = window.location.pathname;
+      }
+    }, 1000);
   }
 
   window.addEventListener("locationchange", (event: Event) => {
