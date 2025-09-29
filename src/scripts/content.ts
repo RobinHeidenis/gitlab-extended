@@ -18,9 +18,7 @@ const setupNavigationListener = () => {
     });
   } else {
     setInterval(() => {
-      console.log("CHECKING");
       if (window.location.pathname !== previousPathname) {
-        console.log("DIFFERENT");
         window.dispatchEvent(new Event("locationchange"));
         previousPathname = window.location.pathname;
       }

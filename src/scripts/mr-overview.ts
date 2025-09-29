@@ -144,13 +144,19 @@ const showTotalWithoutEmojis = () => {
     return;
   }
 
-  const totalUnresolvedIssues =
-    unresolvedIssuesContainers[1]!.innerText.split(" ")[0];
+  const counter = unresolvedIssuesContainers[1];
+  if (!counter) {
+    return;
+  }
+
+  const totalUnresolvedIssues = counter.innerText.split(" ")[0];
 
   for (const container of unresolvedIssuesContainers) {
     (container.firstChild as HTMLElement).textContent =
       `${totalUnEmojid.length} unresolved threads (${totalUnresolvedIssues} total)`;
   }
+
+  return true;
 };
 
 const addBadgeToEmojiCollapsedIssues = () => {
@@ -297,6 +303,39 @@ function getFromStorage(key: string) {
 function setInStorage(key: string, value: string) {
   localStorage.setItem(`__gitlab-extended-${key}`, value);
 }
+
+function setupDiscussionCounterListener() {
+  const observer = new MutationObserver(() => {
+    if (hasDiscussionTotalCounter()) {
+      const success = showTotalWithoutEmojis();
+      if (success) {
+        observer.disconnect();
+      }
+    }
+  });
+
+  observer.observe(document.body, {
+    childList: true,
+    subtree: true,
+  });
+
+  if (hasDiscussionTotalCounter()) {
+    const success = showTotalWithoutEmojis();
+    if (success) {
+      observer.disconnect();
+    }
+  }
+}
+
+function hasDiscussionTotalCounter() {
+  const counters = document.querySelectorAll(
+    'div[data-testid="discussions-counter-text"]',
+  );
+
+  // Mobile and desktop views have different counters, wait for both
+  return counters.length >= 1;
+}
+
 export const setupMROverview = () => {
   addCollapseAllEmojisButtonToPage();
 
@@ -315,7 +354,5 @@ export const setupMROverview = () => {
     }
   }, 3000);
 
-  setTimeout(() => {
-    showTotalWithoutEmojis();
-  }, 10000);
+  setupDiscussionCounterListener();
 };
