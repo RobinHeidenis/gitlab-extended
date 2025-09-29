@@ -1,209 +1,59 @@
-const createSeedlingSvg = () => {
-  const seedlingSvg = document.createElementNS(
-    "http://www.w3.org/2000/svg",
-    "svg",
-  );
-  seedlingSvg.setAttribute("enable-background", "new 0 0 512 512");
-  seedlingSvg.setAttribute("viewBox", "0 0 512 512");
-  seedlingSvg.setAttributeNS(
-    "http://www.w3.org/2000/xmlns/",
-    "xmlns:xlink",
-    "http://www.w3.org/1999/xlink",
-  );
-  seedlingSvg.setAttribute("height", "12");
-  seedlingSvg.setAttribute("width", "12");
+import { setupMRDiff } from "./mr-diff";
+import { setupMROverview } from "./mr-overview";
 
-  const seedlingPath = document.createElementNS(
-    "http://www.w3.org/2000/svg",
-    "path",
-  );
-  seedlingPath.setAttribute(
-    "d",
-    "m500.216 29.351c-.086-.06-.172-.12-.259-.18-6.914-4.92-16.501-10.586-27.578-15.388-22.155-9.584-49.682-12.911-75.307-7.301-25.641 5.537-49.393 19.942-65.75 37.609-8.17 8.87-14.637 17.865-18.961 25.111-1.195 1.951-2.224 3.757-3.096 5.363-1.5.636-3.019 1.32-4.527 2.106-5.98 2.97-12.223 6.707-18.178 11.419-5.983 4.674-11.791 10.167-17.204 16.305-5.447 6.122-10.313 12.985-14.809 20.169-4.529 7.181-8.399 14.823-11.885 22.586l-2.544 5.849c-.764 1.973-1.526 3.945-2.288 5.912l-1.138 2.952-1.017 2.972c-.675 1.982-1.347 3.957-2.018 5.925-.632 1.976-1.195 3.957-1.79 5.923-.563 1.971-1.223 3.919-1.695 5.882-.118.455-.233.902-.351 1.356-2.977-4.441-6.186-8.574-9.602-12.304-3.897-4.253-8-8.038-12.168-11.384-8.354-6.688-17.021-11.458-25.014-14.84-4.566-1.891-8.909-3.311-12.94-4.4.037-.131.056-.201.057-.201h.001v-.001h-.001s-3.876-2.797-10.027-5.934c-6.197-3.259-14.661-6.831-24.249-9.533-19.173-5.387-42.047-5.064-62.378 2.355-20.352 7.362-38.179 21.765-49.599 38.017-5.7 8.156-9.992 16.225-12.727 22.627-.028.063-.055.126-.083.188-2.706 6.173-.128 13.413 5.868 16.491.077.039.154.079.232.119 6.197 3.258 14.661 6.831 24.249 9.533 19.173 5.387 42.047 5.064 62.378-2.355 20.352-7.361 38.179-21.764 49.599-38.017 2.551-3.65 4.803-7.273 6.776-10.746 2.932.798 6.128 1.869 9.494 3.313 5.337 2.363 11.128 5.642 16.684 10.226 2.769 2.295 24.518 25.017 24.518 51.223.828 4.381 1.267 8.916 1.225 13.53-.039 5.738-.079 11.546-.119 17.4-.083 11.737-.168 23.66-.253 35.583-.679 95.384-1.357 190.767-1.357 190.767v.278c.077 10.779 39.11 10.501 39.033-.278 0 0-.679-95.384-1.357-190.767-.033-4.672-.066-9.34-.1-14.001.189-.991.285-2.016.273-3.064 0 0-.044-4.008-.121-11.022-.007-.872-.014-1.79-.022-2.753.015-.922.03-1.888.046-2.894.031-2.014.063-4.192.099-6.52.003-2.317.137-4.834.251-7.478.131-2.642.2-5.433.397-8.324.211-2.89.431-5.901.659-9.017.244-3.114.637-6.305.961-9.604.741-6.577 1.705-13.479 2.98-20.545.152-.886.305-1.775.459-2.668.184-.883.369-1.77.554-2.659.37-1.781.743-3.575 1.117-5.38.341-1.819.856-3.584 1.279-5.396.453-1.8.873-3.624 1.356-5.431.517-1.794 1.036-3.595 1.556-5.401l.781-2.716.89-2.674c.593-1.787 1.186-3.578 1.781-5.37l2.002-5.275c2.745-6.993 5.806-13.851 9.405-20.2 3.569-6.36 7.425-12.414 11.731-17.736 4.278-5.345 8.844-10.094 13.524-14.137 4.658-4.083 9.522-7.294 14.173-9.9 1.726-1.022 3.473-1.84 5.162-2.63 6.662 4.506 15.33 9.458 25.182 13.729 22.154 9.584 49.682 12.911 75.307 7.301 25.641-5.538 49.393-19.943 65.75-37.609 8.17-8.871 14.637-17.866 18.961-25.112.044-.071.087-.142.13-.213 4.257-6.977 2.337-16.088-4.368-20.761z",
-  );
-  seedlingPath.setAttribute("fill", "#072b15");
-  seedlingSvg.appendChild(seedlingPath);
+let MROVerviewSetup = false;
 
-  return seedlingSvg;
-};
+// Firefox only
+let previousPathname = window.location.pathname;
 
-const collapseIssuesWithSeedling = () => {
-  for (const node of document.querySelectorAll(
-    'button[data-testid="award-button"][data-emoji-name="seedling"]',
-  )) {
-    const issue = node.closest("div[data-discussion-id]");
-
-    if (!issue) {
-      continue;
-    }
-
-    const collapseButton = issue!.querySelector(
-      'button[data-testid="collapse-replies-button"]',
-    ) as HTMLButtonElement | null;
-
-    if (!collapseButton) {
-      continue;
-    }
-
-    collapseButton.click();
-    issue.setAttribute("data-collapsed-by", "gitlab-extended");
-  }
-};
-
-const addCollapseAllSeedlingsButtonToPage = () => {
-  const containerDiv = document.querySelector("#notes > div > div");
-
-  const collapseButton = document.createElement("button");
-  collapseButton.classList.add(
-    "btn",
-    "ml-sm-2",
-    "gl-w-full",
-    "sm:gl-w-auto",
-    "btn-default",
-    "btn-md",
-    "gl-button",
-  );
-  collapseButton.type = "button";
-  collapseButton.innerHTML =
-    "<span class='gl-button-text'>Collapse all seedlings <gl-emoji data-name='seedling' data-unicode-version='6.0' title='seedling' class='gl-ml-3'>🌱</gl-emoji></span>";
-  collapseButton.onclick = collapseIssuesWithSeedling;
-
-  containerDiv?.prepend(collapseButton);
-};
-
-const setupClickEventListeners = () => {
-  const container = document.getElementById("notes-list");
-  if (!container) throw new Error("UHHHH NO NOTES CONTAINER??");
-
-  const issueDivs = container.querySelectorAll("div[data-discussion-id]");
-
-  issueDivs.forEach((div) =>
-    div.addEventListener("click", async (event) => {
-      const target = event.target;
-
+const setupNavigationListener = () => {
+  if ("navigation" in window) {
+    (window.navigation as any).addEventListener("navigate", (event: Event) => {
       if (
-        target &&
-        "dataset" in target &&
-        target.dataset instanceof DOMStringMap &&
-        target.dataset.name == "seedling"
+        window.location.pathname !==
+        new URL((event as any).destination.url).pathname
       ) {
-        const issue = (event.currentTarget as HTMLElement).closest(
-          "div[data-discussion-id]",
-        );
-
-        await new Promise((resolve) =>
-          setTimeout(() => resolve("let's do this"), 1000),
-        );
-
-        if (!issue) {
-          console.log("No issue found");
-          return;
-        }
-
-        const header = issue.querySelector("div.note-header-info")!;
-        if (header.children.length === 4) {
-          header.removeChild(header.children[3]!);
-          showTotalWithoutSeedlings();
-          return;
-        }
-
-        const collapseButton = issue.querySelector(
-          'button[data-testid="collapse-replies-button"]',
-        ) as HTMLButtonElement | null;
-
-        if (!collapseButton) {
-          console.log("No collapse button found");
-          return;
-        }
-
-        collapseButton.click();
-
-        issue.setAttribute("data-collapsed-by", "gitlab-extended");
-
-        toggleResolvedBadge(issue as HTMLDivElement);
-
-        showTotalWithoutSeedlings();
+        window.dispatchEvent(new Event("locationchange"));
       }
-    }),
-  );
-};
-
-const showTotalWithoutSeedlings = () => {
-  const totalUnSeedlingd = document.querySelectorAll(
-    'div[data-discussion-id]:not([data-discussion-resolved]):not(:has(button[data-emoji-name="seedling"])):has(li[aria-expanded="true"])',
-  );
-
-  const unresolvedIssuesContainers = document.querySelectorAll<HTMLDivElement>(
-    'div[data-testid="discussions-counter-text"]',
-  );
-  if (!unresolvedIssuesContainers) {
-    return;
+    });
+  } else {
+    setInterval(() => {
+      if (window.location.pathname !== previousPathname) {
+        window.dispatchEvent(new Event("locationchange"));
+        previousPathname = window.location.pathname;
+      }
+    }, 1000);
   }
 
-  const totalUnresolvedIssues =
-    unresolvedIssuesContainers[1]!.innerText.split(" ")[0];
+  window.addEventListener("locationchange", (event: Event) => {
+    if (window.location.pathname.endsWith("diffs")) {
+      setupMRDiff();
+      return;
+    }
 
-  for (const container of unresolvedIssuesContainers) {
-    (container.firstChild as HTMLElement).textContent =
-      `${totalUnSeedlingd.length} unresolved threads (${totalUnresolvedIssues} total)`;
-  }
-};
-
-const addBadgeToSeedlingCollapsedIssues = () => {
-  const allCollapsedIssues = document.querySelectorAll(
-    'div[data-collapsed-by="gitlab-extended"]',
-  );
-
-  for (const issue of allCollapsedIssues) {
-    toggleResolvedBadge(issue as HTMLDivElement);
-  }
-};
-
-const toggleResolvedBadge = (issue: HTMLDivElement) => {
-  const badge = document.createElement("span");
-  badge.classList.add(
-    "badge",
-    "gl-badge",
-    "gl-shrink-0",
-    "badge-success",
-    "badge-pill",
-    "gl-ml-auto",
-  );
-
-  const badgeIcon = createSeedlingSvg();
-  badgeIcon.classList.add("gl-badge-icon", "gl-icon");
-  badgeIcon.style.width = "12px";
-  badge.appendChild(badgeIcon);
-
-  const badgeText = document.createElement("span");
-  badgeText.classList.add("gl-badge-content");
-  badgeText.textContent = "Resolved";
-  badge.appendChild(badgeText);
-
-  // div with class note-header-info
-  const header = issue.querySelector("div.note-header-info")!;
-  header.appendChild(badge);
-  header.classList.add("gl-flex", "gl-gap-1");
+    if (!MROVerviewSetup) {
+      setupMROverview();
+      MROVerviewSetup = true;
+    }
+  });
 };
 
 const main = () => {
+  console.log("✨ Gitlab extended is now running ✨");
+
+  setupNavigationListener();
+
   if (window.location.pathname.endsWith("diffs")) {
+    setTimeout(() => {
+      setupMRDiff();
+    }, 2000);
     return;
   }
 
-  console.log("✨ Gitlab extended is now running ✨");
-
-  addCollapseAllSeedlingsButtonToPage();
-
-  setTimeout(() => {
-    setupClickEventListeners();
-    collapseIssuesWithSeedling();
-    addBadgeToSeedlingCollapsedIssues();
-  }, 3000);
-
-  setTimeout(() => {
-    showTotalWithoutSeedlings();
-  }, 10000);
+  if (!MROVerviewSetup) {
+    setupMROverview();
+    MROVerviewSetup = true;
+  }
 };
 
 main();
