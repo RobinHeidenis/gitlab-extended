@@ -49,7 +49,7 @@ const setupNavigationListener = () => {
 };
 
 const main = () => {
-  console.log("✨ Gitlab extended is now running ✨1");
+  console.log("✨ Gitlab extended is now running ✨");
 
   setupNavigationListener();
 

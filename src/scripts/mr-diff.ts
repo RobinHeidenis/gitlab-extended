@@ -1,3 +1,12 @@
+/**
+##################################################
+#                                                #
+#                 Adapted from                   #
+# https://github.com/JulienZD/GitLab-MR-AutoNext #
+#                                                #
+################################################## 
+*/
+
 declare global {
   interface Window {
     observer?: MutationObserver;
@@ -13,7 +22,6 @@ const getElementByQuerySelector = <TElement extends HTMLElement>(
 
 const setupAutoNext = () => {
   if (typeof window.observer !== "undefined") {
-    console.log("Disconnecting existing observer.");
     window.observer.disconnect();
   }
 
@@ -31,7 +39,6 @@ const setupAutoNext = () => {
         )?.click();
       }
     });
-    console.log('Added listener to "Viewed" checkbox.');
   };
 
   window.observer = new MutationObserver((mutationsList) => {
@@ -51,7 +58,6 @@ const setupAutoNext = () => {
   const setupCheckboxListener = () => {
     const checkbox = findMarkAsViewedCheckbox();
     if (!checkbox) {
-      console.log("Checkbox not found.");
       return;
     }
     addListenerToViewedCheckbox(checkbox);
@@ -79,7 +85,6 @@ const setupAutoNext = () => {
     const checkbox = findMarkAsViewedCheckbox();
 
     if (!checkbox) {
-      console.log("Checkbox not found.");
       return;
     }
 
@@ -89,7 +94,6 @@ const setupAutoNext = () => {
 };
 
 export const setupMRDiff = () => {
-  console.log("SETTING UP");
 
   if (
     getElementByQuerySelector<HTMLInputElement>('[data-testid="file-by-file"]')
@@ -97,7 +101,6 @@ export const setupMRDiff = () => {
   ) {
     setupAutoNext();
   } else {
-    console.log("Disconnecting observer.");
     window.observer?.disconnect();
   }
 
@@ -107,7 +110,6 @@ export const setupMRDiff = () => {
     if (!(event.target as HTMLInputElement).checked) {
       setupAutoNext();
     } else {
-      console.log("Disconnecting observer.");
       window.observer?.disconnect();
     }
   });
