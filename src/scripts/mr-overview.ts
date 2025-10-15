@@ -1,5 +1,6 @@
 import { createEmojiSvg, createFallbackEmojiSvg } from "./icons/emoji";
 import { createJiraIcon } from "./icons/jira";
+import { addViewInJiraButton } from "./overview/view-in-jira-button";
 
 const {
   EMOJI,
@@ -320,72 +321,9 @@ function hasDiscussionTotalCounter() {
   return counters.length >= 1;
 }
 
-const addViewInJiraButton = () => {
-  if (!JIRA_URL || !JIRA_PREFIX) {
-    console.info(
-      "No Jira URL or prefix configured. If you want to be able to see the MRs issue in Jira, please configure the __gitlab-extended-jira_url and __gitlab-extended-jira_prefix in your local storage.",
-    );
-    return;
-  }
-
-  const title = document.getElementsByClassName("title")?.[0];
-
-  if (!title) {
-    return;
-  }
-
-  const mrTitle = title.textContent?.trim();
-  // issue number is in this format: PREFIX-1234 or in some cases people forget the hyphen so PREFIX 1234
-  const issueNumber =
-    mrTitle?.match(new RegExp(`${JIRA_PREFIX}-\\d+`)) ||
-    mrTitle?.match(new RegExp(`${JIRA_PREFIX} \\d+`)) ||
-    mrTitle?.match(new RegExp(`${JIRA_PREFIX.toLowerCase()}-\\d+`)) ||
-    mrTitle?.match(new RegExp(`${JIRA_PREFIX.toLowerCase()} \\d+`));
-
-  if (!issueNumber) {
-    return;
-  }
-
-  const jiraButton = document.createElement("a");
-  jiraButton.href = `${JIRA_URL}/browse/${issueNumber[0].replace(/\s/g, "-")}`;
-  jiraButton.target = "_blank";
-  jiraButton.classList.add(
-    "btn",
-    "btn-default",
-    "btn-sm",
-    "btn-block",
-    "btn-icon",
-  );
-  jiraButton.style.marginTop = "10px";
-  jiraButton.style.display = "flex";
-  jiraButton.style.alignItems = "center";
-  jiraButton.style.justifyContent = "center";
-  jiraButton.style.gap = "8px";
-
-  // Create and add the Jira icon
-  const jiraIcon = createJiraIcon();
-  jiraIcon.style.flexShrink = "0";
-  jiraButton.appendChild(jiraIcon);
-
-  // Create text span
-  const buttonText = document.createElement("span");
-  buttonText.textContent = "View in Jira";
-  jiraButton.appendChild(buttonText);
-
-  const issueSidebar = document.getElementsByClassName(
-    "issuable-context-form",
-  )?.[0];
-
-  if (!issueSidebar) {
-    throw new Error("Could not find issue sidebar");
-  }
-
-  issueSidebar.appendChild(jiraButton);
-};
-
 export const setupMROverview = () => {
   addCollapseAllEmojisButtonToPage();
-  addViewInJiraButton();
+  addViewInJiraButton(JIRA_URL, JIRA_PREFIX);
 
   setTimeout(() => {
     setupClickEventListeners();
