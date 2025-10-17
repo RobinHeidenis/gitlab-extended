@@ -260,8 +260,8 @@ function loadConstants() {
   const EMOJI_EMOJI = getFromStorage("emoji_emoji") || "🌱";
   const EMOJI_SVG = getFromStorage("emoji_svg") || createFallbackEmojiSvg();
   const EMOJI_BG_COLOR = getFromStorage("emoji_bg_color") || "#072b15";
-  const JIRA_URL = getFromStorage("jira_url");
-  const JIRA_PREFIX = getFromStorage("jira_prefix");
+  const JIRA_URL = getFromStorage("jira_url") || "";
+  const JIRA_PREFIX = getFromStorage("jira_prefix") || "";
 
   // Set everything in local storage
   setInStorage("emoji", EMOJI);
@@ -269,6 +269,8 @@ function loadConstants() {
   setInStorage("emoji_emoji", EMOJI_EMOJI);
   setInStorage("emoji_svg", EMOJI_SVG);
   setInStorage("emoji_bg_color", EMOJI_BG_COLOR);
+  setInStorage("jira_url", JIRA_URL);
+  setInStorage("jira_prefix", JIRA_PREFIX);
 
   return {
     EMOJI,

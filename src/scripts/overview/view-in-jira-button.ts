@@ -1,4 +1,4 @@
-import { createJiraIcon } from '../icons/jira';
+import { createJiraIcon } from "../icons/jira";
 
 export const addViewInJiraButton = (
   JIRA_URL: string | null,
@@ -121,8 +121,8 @@ export const addViewInJiraButton = (
     jiraButton.target = "_blank";
     jiraButton.classList.add(
       "btn",
+      "gl-button",
       "btn-default",
-      "btn-sm",
       "btn-block",
       "btn-icon",
     );
