@@ -1,5 +1,4 @@
 import { createEmojiSvg, createFallbackEmojiSvg } from "./icons/emoji";
-import { createJiraIcon } from "./icons/jira";
 import { addViewInJiraButton } from "./overview/view-in-jira-button";
 
 const {
@@ -15,13 +14,14 @@ const {
 const GITLAB_EMOJI_ELEMENT = (classes = "", title = EMOJI) =>
   `<gl-emoji data-name='${EMOJI}' data-unicode-version='6.0' title='${title}' class='${classes}'>${EMOJI_EMOJI}</gl-emoji>`;
 
+const COLLAPSED_BY_MARKER = "data-collapsed-by";
+
 const collapseIssuesWithEmoji = () => {
   for (const node of document.querySelectorAll(
     `button[data-testid="award-button"][data-emoji-name="${EMOJI}"]`,
   )) {
     const issue = node.closest("div[data-discussion-id]");
-
-    if (!issue) {
+    if (!issue || issue.hasAttribute(COLLAPSED_BY_MARKER)) {
       continue;
     }
 
@@ -34,7 +34,7 @@ const collapseIssuesWithEmoji = () => {
     }
 
     collapseButton.click();
-    issue.setAttribute("data-collapsed-by", "gitlab-extended");
+    issue.setAttribute(COLLAPSED_BY_MARKER, "gitlab-extended");
   }
 };
 
@@ -59,13 +59,23 @@ const addCollapseAllEmojisButtonToPage = () => {
 };
 
 const setupClickEventListeners = () => {
+  const MARKER = "data-gitlab-extended-click-listener";
+
   const container = document.getElementById("notes-list");
-  if (!container) throw new Error("UHHHH NO NOTES CONTAINER??");
+  if (!container) {
+    throw new Error("No container found for notes-list");
+  }
 
   const issueDivs = container.querySelectorAll("div[data-discussion-id]");
 
-  issueDivs.forEach((div) =>
-    div.addEventListener("click", async (event) => {
+  for (const issueDiv of issueDivs) {
+    if (issueDiv.hasAttribute(MARKER)) {
+      continue;
+    }
+
+    issueDiv.setAttribute(MARKER, "true");
+
+    issueDiv.addEventListener("click", async (event) => {
       const target = event.target;
 
       if (
@@ -105,14 +115,14 @@ const setupClickEventListeners = () => {
 
         collapseButton.click();
 
-        issue.setAttribute("data-collapsed-by", "gitlab-extended");
+        issue.setAttribute(COLLAPSED_BY_MARKER, "gitlab-extended");
 
-        toggleResolvedBadge(issue as HTMLDivElement);
+        toggleResolvedBadge(issue as unknown as HTMLDivElement, false);
 
         showTotalWithoutEmojis();
       }
-    }),
-  );
+    });
+  }
 };
 
 const showTotalWithoutEmojis = () => {
@@ -144,11 +154,11 @@ const showTotalWithoutEmojis = () => {
 
 const addBadgeToEmojiCollapsedIssues = () => {
   const allCollapsedIssues = document.querySelectorAll(
-    'div[data-collapsed-by="gitlab-extended"]',
+    `div[${COLLAPSED_BY_MARKER}="gitlab-extended"]`,
   );
 
   for (const issue of allCollapsedIssues) {
-    toggleResolvedBadge(issue as HTMLDivElement);
+    toggleResolvedBadge(issue as HTMLDivElement, false);
   }
 };
 
@@ -157,7 +167,13 @@ const addButtonsToResolveIssues = (csrfToken: string) => {
     ".discussion-notes ul.notes li.note-comment:first-of-type",
   );
 
+  const RESOLVE_BUTTON_MARKER = "data-gitlab-extended-resolve-button";
+
   for (const issue of issues) {
+    if (issue.hasAttribute(RESOLVE_BUTTON_MARKER)) {
+      continue;
+    }
+
     const button = document.createElement("button");
     button.classList.add(
       "btn",
@@ -185,6 +201,10 @@ const addButtonsToResolveIssues = (csrfToken: string) => {
     }
 
     button.onclick = async () => {
+      const shouldBadgeBeRemoved = !!issue.querySelector(
+        `button[data-testid="award-button"][data-emoji-name="${EMOJI}"]`,
+      );
+
       // Mark the issue as "resolved" by toggling the configured emoji
       await fetch(toggleEmojiUrl, {
         method: "POST",
@@ -199,9 +219,12 @@ const addButtonsToResolveIssues = (csrfToken: string) => {
       });
 
       issue.setAttribute("data-discussion-resolved", "");
-      issue.setAttribute("data-collapsed-by", "gitlab-extended");
+      issue.setAttribute(COLLAPSED_BY_MARKER, "gitlab-extended");
 
-      toggleResolvedBadge(issue as unknown as HTMLDivElement);
+      toggleResolvedBadge(
+        issue as unknown as HTMLDivElement,
+        shouldBadgeBeRemoved,
+      );
       showTotalWithoutEmojis();
     };
 
@@ -210,11 +233,34 @@ const addButtonsToResolveIssues = (csrfToken: string) => {
     );
 
     firstActionButton?.insertAdjacentElement("beforebegin", button);
+
+    issue.setAttribute(RESOLVE_BUTTON_MARKER, "true");
   }
 };
 
-const toggleResolvedBadge = (issue: HTMLDivElement) => {
+const toggleResolvedBadge = (
+  issue: HTMLDivElement,
+  removeIfPresent: boolean,
+) => {
+  const HAS_RESOLVED_BADGE_MARKER = "data-gitlab-extended-resolve";
+  const BADGE_MARKER = "data-gitlab-extended-resolve-badge";
+
+  if (removeIfPresent) {
+    const badge = issue.querySelector(`span[${BADGE_MARKER}]`);
+    badge?.remove();
+
+    return;
+  }
+
+  if (issue.hasAttribute(HAS_RESOLVED_BADGE_MARKER)) {
+    return;
+  }
+
+  issue.setAttribute(HAS_RESOLVED_BADGE_MARKER, "true");
+
   const badge = document.createElement("span");
+  badge.setAttribute(BADGE_MARKER, "true");
+
   badge.classList.add(
     "badge",
     "gl-badge",
@@ -239,6 +285,7 @@ const toggleResolvedBadge = (issue: HTMLDivElement) => {
   header.appendChild(badge);
   header.classList.add("gl-flex", "gl-gap-1");
 };
+
 function extractCsrfToken() {
   const scripts = document.querySelectorAll("script");
   for (let script of scripts) {
@@ -327,7 +374,9 @@ export const setupMROverview = () => {
   addCollapseAllEmojisButtonToPage();
   addViewInJiraButton(JIRA_URL, JIRA_PREFIX);
 
-  setTimeout(() => {
+  setupDiscussionCounterListener();
+
+  const observer = new MutationObserver(() => {
     setupClickEventListeners();
     collapseIssuesWithEmoji();
     addBadgeToEmojiCollapsedIssues();
@@ -340,7 +389,11 @@ export const setupMROverview = () => {
         "No CSRF token found, cannot add buttons to resolve issues",
       );
     }
-  }, 3000);
+  });
 
-  setupDiscussionCounterListener();
+  // Start observing the body for changes
+  observer.observe(document.body, {
+    childList: true,
+    subtree: true,
+  });
 };
