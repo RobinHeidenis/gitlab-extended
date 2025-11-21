@@ -11,9 +11,9 @@
     "start:firefox": "web-ext run --source-dir ./dist/"
   },
   "devDependencies": {
-    "prettier": "^3.3.3",
-    "rolldown": "1.0.0-beta.40",
-    "typescript": "^5.5.3"
+    "prettier": "^3.6.2",
+    "rolldown": "1.0.0-beta.51",
+    "typescript": "^5.9.3"
   },
   "private": false,
   "packageManager": "pnpm@9.10.0+sha512.73a29afa36a0d092ece5271de5177ecbf8318d454ecd701343131b8ebc0c1a91c487da46ab77c8e596d6acf1461e3594ced4becedf8921b074fbd8653ed7051c"
