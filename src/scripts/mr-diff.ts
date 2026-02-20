@@ -35,8 +35,17 @@ const setupAutoNext = () => {
     checkbox.addEventListener("change", (event: Event) => {
       if ((event.target as HTMLInputElement).checked) {
         getElementByQuerySelector<HTMLInputElement>(
-          '[data-testid="gl-pagination-next"]',
+          '[data-testid="nextButton"]',
         )?.click();
+        setTimeout(() => {
+          const scrollableMRDiv = document.getElementsByClassName(
+            "panel-content-inner",
+          )?.[0] as HTMLDivElement | null;
+
+          if (scrollableMRDiv) {
+            scrollableMRDiv.scrollTo({ top: 70, behavior: "smooth" });
+          }
+        }, 200);
       }
     });
   };
@@ -94,7 +103,6 @@ const setupAutoNext = () => {
 };
 
 export const setupMRDiff = () => {
-
   if (
     getElementByQuerySelector<HTMLInputElement>('[data-testid="file-by-file"]')
       ?.checked
