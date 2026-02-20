@@ -26,15 +26,18 @@ const setupNavigationListener = () => {
   }
 
   window.addEventListener("locationchange", (event: Event) => {
-    if (window.location.pathname.endsWith("diffs")) {
-      setupMRDiff();
-      return;
-    }
+    setTimeout(() => {
+      if (window.location.pathname.endsWith("diffs")) {
+        console.log("setting up MR diff");
+        setupMRDiff();
+        return;
+      }
 
-    if (!MROVerviewSetup) {
-      setupMROverview();
-      MROVerviewSetup = true;
-    }
+      if (!MROVerviewSetup) {
+        setupMROverview();
+        MROVerviewSetup = true;
+      }
+    }, 1000);
   });
 };
 
