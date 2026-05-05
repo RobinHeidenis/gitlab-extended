@@ -1,6 +1,6 @@
 {
   "name": "gitlab-extended",
-  "version": "1.4.0",
+  "version": "1.6.0",
   "description": "",
   "license": "MIT",
   "main": "dist/index.js",
@@ -8,12 +8,13 @@
   "scripts": {
     "build": "rm -rf ./dist && rolldown ./src/scripts/content.ts --file ./dist/scripts/content.js && cp manifest.json dist/",
     "package": "mkdir -p packages && cd dist && zip -r -FS ../packages/gitlab-extended.xpi * --exclude '*.git*' && cd ..",
+    "typecheck": "tsgo --noEmit",
     "start:firefox": "web-ext run --source-dir ./dist/"
   },
   "devDependencies": {
-    "prettier": "^3.6.2",
-    "rolldown": "1.0.0-beta.51",
-    "typescript": "^5.9.3"
+    "@typescript/native-preview": "beta",
+    "prettier": "^3.8.3",
+    "rolldown": "1.0.0-rc.18"
   },
   "private": false,
   "packageManager": "pnpm@9.10.0+sha512.73a29afa36a0d092ece5271de5177ecbf8318d454ecd701343131b8ebc0c1a91c487da46ab77c8e596d6acf1461e3594ced4becedf8921b074fbd8653ed7051c"
