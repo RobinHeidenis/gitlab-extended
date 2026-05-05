@@ -1,0 +1,41 @@
+src/scripts/mr-overview.ts
+  1bed591be7eed308 2-9,69-107,228,288-368,503,512
+src/scripts/icons/sparkle.ts
+  1bed591be7eed308 1-35
+src/scripts/overview/copy-open-comments.ts
+  f8b693716bbcb62b 48-64
+  1bed591be7eed308 1-47,65-124,127-336
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "79b837c18b565341c393bbc07591bdeb1e2e9290",
+  "prompts": {
+    "1bed591be7eed308": {
+      "agent_id": {
+        "tool": "auggie",
+        "id": "459c023e-8e98-4f9d-b48f-83b8c2eb9eb2",
+        "model": "Claude Opus 4.5"
+      },
+      "human_author": "Robin Heidenis",
+      "messages": [],
+      "total_additions": 595,
+      "total_deletions": 111,
+      "accepted_lines": 483,
+      "overriden_lines": 1
+    },
+    "f8b693716bbcb62b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ddef2617-a602-4d55-9c63-edc6e791eb47",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Robin Heidenis",
+      "messages": [],
+      "total_additions": 17,
+      "total_deletions": 0,
+      "accepted_lines": 17,
+      "overriden_lines": 0
+    }
+  }
+}
