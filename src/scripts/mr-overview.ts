@@ -189,11 +189,17 @@ const showTotalWithoutEmojis = () => {
     return;
   }
 
-  const totalUnresolvedIssues = counter.innerText.split(" ")[0];
+  // Since a recent version there's a newline in the counter text, so we need to split it and take the first part
+  const totalUnresolvedIssues = counter.innerText.split(" ")[0]?.split("\n")[0];
+
+  const isAllResolved = counter.innerText.startsWith("All threads resolved");
 
   for (const container of unresolvedIssuesContainers) {
-    (container.firstChild as HTMLElement).textContent =
-      `${totalUnEmojid.length} unresolved threads (${totalUnresolvedIssues} total)`;
+    const outputText = isAllResolved && totalUnEmojid.length === 0
+      ? "All threads resolved"
+      : `${totalUnEmojid.length} unresolved threads (${totalUnresolvedIssues} total)`;
+
+    (container.firstChild as HTMLElement).textContent = outputText;
   }
 
   return true;
