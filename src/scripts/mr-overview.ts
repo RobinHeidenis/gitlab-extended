@@ -1,4 +1,12 @@
 import { createEmojiSvg, createFallbackEmojiSvg } from "./icons/emoji";
+import { createSparkleIcon } from "./icons/sparkle";
+import {
+  collectOpenDiscussions,
+  copyToClipboard,
+  extractSingleDiscussion,
+  formatDiscussionsAsMarkdown,
+  formatSingleDiscussionAsPrompt,
+} from "./overview/copy-open-comments";
 import { addViewInJiraButton } from "./overview/view-in-jira-button";
 
 const {
@@ -56,6 +64,45 @@ const addCollapseAllEmojisButtonToPage = () => {
   collapseButton.onclick = collapseIssuesWithEmoji;
 
   containerDiv?.prepend(collapseButton);
+};
+
+const addCopyOpenCommentsButtonToPage = () => {
+  const containerDiv = document.querySelector("#notes > div > div");
+  if (!containerDiv) return;
+
+  const copyButton = document.createElement("button");
+  copyButton.classList.add(
+    "btn",
+    "ml-sm-2",
+    "gl-w-full",
+    "sm:gl-w-auto",
+    "btn-default",
+    "btn-md",
+    "gl-button",
+  );
+  copyButton.type = "button";
+  copyButton.innerHTML = `<span class='gl-button-text'>📋 Copy open comments</span>`;
+
+  copyButton.onclick = async () => {
+    const discussions = collectOpenDiscussions(EMOJI);
+    const markdown = formatDiscussionsAsMarkdown(discussions);
+    const success = await copyToClipboard(markdown);
+
+    if (success) {
+      const originalText = copyButton.innerHTML;
+      copyButton.innerHTML = `<span class='gl-button-text'>✅ Copied ${discussions.length} discussion(s)!</span>`;
+      setTimeout(() => {
+        copyButton.innerHTML = originalText;
+      }, 2000);
+    } else {
+      copyButton.innerHTML = `<span class='gl-button-text'>❌ Failed to copy</span>`;
+      setTimeout(() => {
+        copyButton.innerHTML = `<span class='gl-button-text'>📋 Copy open comments</span>`;
+      }, 2000);
+    }
+  };
+
+  containerDiv.prepend(copyButton);
 };
 
 const setupClickEventListeners = () => {
@@ -178,7 +225,7 @@ const addButtonsToResolveIssues = (csrfToken: string) => {
     button.classList.add(
       "btn",
       "btn-default",
-      "btn-sm",
+      "btn-md",
       "btn-default-tertiary",
       "btn-icon",
       "note-action-button",
@@ -235,6 +282,87 @@ const addButtonsToResolveIssues = (csrfToken: string) => {
     firstActionButton?.insertAdjacentElement("beforebegin", button);
 
     issue.setAttribute(RESOLVE_BUTTON_MARKER, "true");
+  }
+};
+
+const addAiCopyButtonsToComments = () => {
+  const AI_BUTTON_MARKER = "data-gitlab-extended-ai-button";
+
+  // Get all first comments in discussion threads
+  const comments = document.querySelectorAll<HTMLLIElement>(
+    ".discussion-notes ul.notes li.note-comment:first-of-type",
+  );
+
+  for (const comment of comments) {
+    if (comment.hasAttribute(AI_BUTTON_MARKER)) {
+      continue;
+    }
+
+    const button = document.createElement("button");
+    button.classList.add(
+      "btn",
+      "btn-default",
+      "btn-md",
+      "btn-default-tertiary",
+      "btn-icon",
+      "note-action-button",
+      "gl-button",
+    );
+
+    const sparkleIcon = createSparkleIcon();
+    sparkleIcon.classList.add(
+      "gl-button-icon",
+      "gl-icon",
+      "s16",
+      "gl-fill-current",
+    );
+    button.appendChild(sparkleIcon);
+
+    const tooltipText = "Copy as AI prompt (Gitlab Extended)";
+    button.title = tooltipText;
+    button.setAttribute("aria-label", tooltipText);
+
+    button.onclick = async () => {
+      // Find the parent discussion element
+      const discussionElement = comment.closest("div[data-discussion-id]");
+      if (!discussionElement) {
+        console.error("[Gitlab Extended] Could not find discussion element");
+        return;
+      }
+
+      const discussion = extractSingleDiscussion(discussionElement);
+      if (!discussion) {
+        console.error("[Gitlab Extended] Could not extract discussion");
+        return;
+      }
+
+      const prompt = formatSingleDiscussionAsPrompt(discussion);
+      const success = await copyToClipboard(prompt);
+
+      if (success) {
+        button.title = "Copied!";
+        button.style.color = "var(--yellow-500, #f5d547)";
+        setTimeout(() => {
+          button.title = "Copy as AI prompt (Gitlab Extended)";
+          button.style.color = "";
+        }, 2000);
+      } else {
+        button.title = "Failed to copy";
+        button.style.color = "var(--red-500, #dd2b0e)";
+        setTimeout(() => {
+          button.title = "Copy as AI prompt (Gitlab Extended)";
+          button.style.color = "";
+        }, 2000);
+      }
+    };
+
+    const firstActionButton = comment.querySelector(
+      "div.note-actions button.note-action-button",
+    );
+
+    firstActionButton?.insertAdjacentElement("beforebegin", button);
+
+    comment.setAttribute(AI_BUTTON_MARKER, "true");
   }
 };
 
@@ -372,6 +500,7 @@ function hasDiscussionTotalCounter() {
 
 export const setupMROverview = () => {
   addCollapseAllEmojisButtonToPage();
+  addCopyOpenCommentsButtonToPage();
   addViewInJiraButton(JIRA_URL, JIRA_PREFIX);
 
   setupDiscussionCounterListener();
@@ -380,6 +509,7 @@ export const setupMROverview = () => {
     setupClickEventListeners();
     collapseIssuesWithEmoji();
     addBadgeToEmojiCollapsedIssues();
+    addAiCopyButtonsToComments();
 
     const csrfToken = extractCsrfToken();
     if (csrfToken) {
