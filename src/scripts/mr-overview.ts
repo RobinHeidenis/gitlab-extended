@@ -1,4 +1,5 @@
-import { createEmojiSvg, createFallbackEmojiSvg } from "./icons/emoji";
+import { loadConstants } from "./constants";
+import { createEmojiSvg } from "./icons/emoji";
 import { addViewInJiraButton } from "./overview/view-in-jira-button";
 
 const {
@@ -303,45 +304,6 @@ function extractCsrfToken() {
     }
   }
   return null;
-}
-
-// Utilities and whatnot to load dynamic from local storage
-
-function loadConstants() {
-  const EMOJI = getFromStorage("emoji") || "seedling";
-  const EMOJI_PLURAL = getFromStorage("emoji_plural") || "seedlings";
-  const EMOJI_EMOJI = getFromStorage("emoji_emoji") || "🌱";
-  const EMOJI_SVG = getFromStorage("emoji_svg") || createFallbackEmojiSvg();
-  const EMOJI_BG_COLOR = getFromStorage("emoji_bg_color") || "#072b15";
-  const JIRA_URL = getFromStorage("jira_url") || "";
-  const JIRA_PREFIX = getFromStorage("jira_prefix") || "";
-
-  // Set everything in local storage
-  setInStorage("emoji", EMOJI);
-  setInStorage("emoji_plural", EMOJI_PLURAL);
-  setInStorage("emoji_emoji", EMOJI_EMOJI);
-  setInStorage("emoji_svg", EMOJI_SVG);
-  setInStorage("emoji_bg_color", EMOJI_BG_COLOR);
-  setInStorage("jira_url", JIRA_URL);
-  setInStorage("jira_prefix", JIRA_PREFIX);
-
-  return {
-    EMOJI,
-    EMOJI_BG_COLOR,
-    EMOJI_EMOJI,
-    EMOJI_PLURAL,
-    EMOJI_SVG,
-    JIRA_URL,
-    JIRA_PREFIX,
-  };
-}
-
-function getFromStorage(key: string) {
-  return localStorage.getItem(`__gitlab-extended-${key}`);
-}
-
-function setInStorage(key: string, value: string) {
-  localStorage.setItem(`__gitlab-extended-${key}`, value);
 }
 
 function setupDiscussionCounterListener() {
