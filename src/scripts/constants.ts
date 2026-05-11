@@ -30,6 +30,10 @@ const DEFAULT_SPECIAL_CHARACTERS = [
   "⟶",
   "⟵",
   "⟷",
+  // Comparison operators
+  "≠",
+  "≤",
+  "≥",
 ].join(",");
 
 export function loadConstants() {
