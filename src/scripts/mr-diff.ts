@@ -7,9 +7,13 @@
 ################################################## 
 */
 
+import { loadConstants, parseSpecialCharacters } from "./constants";
+import { highlightSpecialCharacters } from "./diff/highlight-special-characters";
+
 declare global {
   interface Window {
     observer?: MutationObserver;
+    gleHighlightObserver?: MutationObserver;
   }
 }
 
@@ -102,7 +106,36 @@ const setupAutoNext = () => {
   });
 };
 
+const setupSpecialCharacterHighlight = () => {
+  const { SPECIAL_CHARACTERS } = loadConstants();
+  const specialChars = parseSpecialCharacters(SPECIAL_CHARACTERS);
+
+  if (window.gleHighlightObserver) {
+    window.gleHighlightObserver.disconnect();
+  }
+
+  let scheduled = false;
+  const scheduleHighlight = () => {
+    if (scheduled) return;
+    scheduled = true;
+    requestAnimationFrame(() => {
+      scheduled = false;
+      highlightSpecialCharacters(specialChars);
+    });
+  };
+
+  window.gleHighlightObserver = new MutationObserver(scheduleHighlight);
+  window.gleHighlightObserver.observe(document.body, {
+    childList: true,
+    subtree: true,
+  });
+
+  highlightSpecialCharacters(specialChars);
+};
+
 export const setupMRDiff = () => {
+  setupSpecialCharacterHighlight();
+
   if (
     getElementByQuerySelector<HTMLInputElement>('[data-testid="file-by-file"]')
       ?.checked
