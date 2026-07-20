@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Gitlab Extended",
-  "version": "1.7",
+  "version": "1.8",
   "description": "Extend GitLab with some useful features",
   "content_scripts": [
     {
