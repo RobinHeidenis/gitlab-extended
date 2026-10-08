@@ -22,6 +22,7 @@ interface StatsSummary {
 interface StatsBreakdown {
   code: StatsSummary;
   tests: StatsSummary;
+  lockfiles: StatsSummary;
   total: StatsSummary;
 }
 
@@ -48,6 +49,32 @@ const isTestOrStory = (filePath: string) =>
     .split("/")
     .slice(0, -1)
     .some((segment) => TEST_DIRECTORIES.includes(segment));
+
+const LOCKFILES = [
+  "package-lock.json",
+  "npm-shrinkwrap.json",
+  "yarn.lock",
+  "pnpm-lock.yaml",
+  "bun.lock",
+  "bun.lockb",
+  "deno.lock",
+  "Gemfile.lock",
+  "Cargo.lock",
+  "composer.lock",
+  "poetry.lock",
+  "Pipfile.lock",
+  "uv.lock",
+  "go.sum",
+  "flake.lock",
+  "Podfile.lock",
+  "pubspec.lock",
+  "mix.lock",
+  "packages.lock.json",
+  "gradle.lockfile",
+];
+
+const isLockfile = (filePath: string) =>
+  LOCKFILES.includes(filePath.split("/").at(-1) ?? "");
 
 const sum = (files: FileStat[]): StatsSummary => ({
   files: files.length,
@@ -98,10 +125,12 @@ const fetchBreakdown = async (
     throw new Error(`Failed to load diff stats (${response.status})`);
   }
 
-  const files: FileStat[] = mr.diffStats ?? [];
+  const allFiles: FileStat[] = mr.diffStats ?? [];
+  const files = allFiles.filter((f) => !isLockfile(f.path));
   return {
     code: sum(files.filter((f) => !isTestOrStory(f.path))),
     tests: sum(files.filter((f) => isTestOrStory(f.path))),
+    lockfiles: sum(allFiles.filter((f) => isLockfile(f.path))),
     total: {
       files: mr.diffStatsSummary.fileCount,
       additions: mr.diffStatsSummary.additions,
@@ -159,11 +188,18 @@ const renderBreakdown = (popover: HTMLElement, breakdown: StatsBreakdown) => {
   const rows: [string, StatsSummary][] = [
     ["Code", breakdown.code],
     ["Tests & stories", breakdown.tests],
+    // Shown so the rows still add up to GitLab's total
+    ...(breakdown.lockfiles.files > 0
+      ? [["Lockfiles (ignored)", breakdown.lockfiles] as [string, StatsSummary]]
+      : []),
     ["Total", breakdown.total],
   ];
 
   for (const [label, stats] of rows) {
     const row = table.insertRow();
+    if (stats === breakdown.lockfiles) {
+      row.style.opacity = "0.6";
+    }
     if (label === "Total") {
       row.style.borderTop = "1px solid var(--gl-border-color-default, #dcdcde)";
       row.style.fontWeight = "bold";
