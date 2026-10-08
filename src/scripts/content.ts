@@ -1,3 +1,4 @@
+import { setupDiffStatsPopover } from "./diff/stats-popover";
 import { setupMRDiff } from "./mr-diff";
 import { setupMROverview } from "./mr-overview";
 
@@ -45,6 +46,7 @@ const main = () => {
   console.log("✨ Gitlab extended is now running ✨");
 
   setupNavigationListener();
+  setupDiffStatsPopover();
 
   if (window.location.pathname.endsWith("diffs")) {
     setTimeout(() => {
