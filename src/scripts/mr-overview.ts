@@ -1,4 +1,5 @@
 import { createEmojiSvg, createFallbackEmojiSvg } from "./icons/emoji";
+import { addAssignButtons } from "./overview/assign-buttons";
 import { addViewInJiraButton } from "./overview/view-in-jira-button";
 
 const {
@@ -386,6 +387,7 @@ export const setupMROverview = () => {
     setupClickEventListeners();
     collapseIssuesWithEmoji();
     addBadgeToEmojiCollapsedIssues();
+    addAssignButtons();
 
     const csrfToken = extractCsrfToken();
     if (csrfToken) {
