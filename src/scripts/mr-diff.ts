@@ -193,18 +193,26 @@ const markViewedAndAdvance = (ui: DiffUi) => {
     }
   };
 
-  // Marking a file as viewed collapses it, so wait for the layout to settle
-  setTimeout(() => {
+  // Marking a file as viewed makes GitLab collapse it and instantly scroll its
+  // header back into view: rapid diffs does so inside the click handler, the
+  // old Vue UI on its next tick. Jump to the next file right away and again
+  // before the next paint, so the user never sees the scroll up to the
+  // collapsed file.
+  const target = resolveNextFile();
+  if (target) {
+    scrollFileToTop(target, "instant");
+  }
+
+  requestAnimationFrame(() => {
     const target = resolveNextFile();
     if (!target || generation !== advanceGeneration) {
       stopWatchingUserInput();
       return;
     }
-    scrollFileToTop(target, "smooth");
+    scrollFileToTop(target, "instant");
 
-    // The layout can keep shifting while the smooth scroll runs (collapse
-    // animation, files loading in batches), which can strand the scroll
-    // mid-way — correct the position once things have settled
+    // The layout can keep shifting afterwards (files loading in batches,
+    // re-renders), so correct the position once things have settled
     setTimeout(() => {
       stopWatchingUserInput();
       if (userTookOver || generation !== advanceGeneration) {
@@ -220,10 +228,10 @@ const markViewedAndAdvance = (ui: DiffUi) => {
         settledTarget.getBoundingClientRect().top - expectedTop,
       );
       if (offBy > 40) {
-        scrollFileToTop(settledTarget, "auto");
+        scrollFileToTop(settledTarget, "instant");
       }
-    }, 800);
-  }, 200);
+    }, 600);
+  });
 };
 
 const setupViewedShortcut = () => {

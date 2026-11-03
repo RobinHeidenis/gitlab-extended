@@ -7,6 +7,8 @@
 ##################################################
 */
 
+import { isTestOrStory } from "../shared/test-files";
+
 interface FileStat {
   path: string;
   additions: number;
@@ -32,23 +34,6 @@ const POPOVER_ID = "gitlab-extended-diff-stats-popover";
 // Vue UI reuses the same component in every file header, so skip those
 const TRIGGER_SELECTOR = ".diff-stats";
 const FILE_SELECTOR = '.diff-file, [data-testid="rd-diff-file"]';
-
-const TEST_DIRECTORIES = [
-  "test",
-  "tests",
-  "spec",
-  "__tests__",
-  "__mocks__",
-  "__snapshots__",
-  "e2e",
-];
-
-const isTestOrStory = (filePath: string) =>
-  /(?:[._](?:test|spec)|\.stories)\./.test(filePath) ||
-  filePath
-    .split("/")
-    .slice(0, -1)
-    .some((segment) => TEST_DIRECTORIES.includes(segment));
 
 const LOCKFILES = [
   "package-lock.json",
