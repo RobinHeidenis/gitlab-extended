@@ -26,9 +26,6 @@ const CODERABBIT_MARKER_PATTERN =
 // CodeRabbit confirms with an "Actions performed" note
 const CONFIRMATION_PATTERN = /actions performed|approv/i;
 
-const log = (message: string, ...details: unknown[]) =>
-  console.info(`[Gitlab Extended] CodeRabbit: ${message}`, ...details);
-
 const getMentionedUsername = (command: string) =>
   command.match(/@([\w.-]+)/)?.[1]?.toLowerCase() ?? "coderabbitai";
 
@@ -84,9 +81,6 @@ const resolveCodeRabbitReply = async (
   const commandDiscussion = discussions.find((discussion) =>
     discussion.notes.some((note) => note.id === commandNoteId),
   );
-  log(
-    `checked ${discussions.length} threads, command thread ${commandDiscussion ? `${commandDiscussion.id} has ${commandDiscussion.notes.length} comment(s)` : "not found"}`,
-  );
 
   const replies = discussions.filter((discussion) => {
     const codeRabbitNotes = discussion.notes.filter(
@@ -103,25 +97,9 @@ const resolveCodeRabbitReply = async (
     );
   });
 
-  if (!replies.length) {
-    log("no reply from CodeRabbit yet");
-    return false;
-  }
+  await Promise.all(replies.filter(isUnresolved).map(resolveDiscussion));
 
-  for (const discussion of replies) {
-    if (!isUnresolved(discussion)) {
-      log(
-        `reply thread ${discussion.id} is already resolved or not resolvable`,
-      );
-      continue;
-    }
-
-    log(`resolving reply thread ${discussion.id}`);
-    await resolveDiscussion(discussion);
-    log(`resolved thread ${discussion.id}`);
-  }
-
-  return true;
+  return replies.length > 0;
 };
 
 const watchForCodeRabbitReply = (
@@ -129,12 +107,10 @@ const watchForCodeRabbitReply = (
   mentionedUsername: string,
 ) => {
   const startedAt = Date.now();
-  log(`watching for a reply to comment ${commandNoteId}`);
 
   const poll = async () => {
     try {
       if (await resolveCodeRabbitReply(commandNoteId, mentionedUsername)) {
-        log("done");
         return;
       }
     } catch (error) {
@@ -147,7 +123,7 @@ const watchForCodeRabbitReply = (
     if (Date.now() - startedAt < POLL_TIMEOUT_MS) {
       setTimeout(poll, POLL_INTERVAL_MS);
     } else {
-      log(`gave up after ${POLL_TIMEOUT_MS / 60000} minutes without a reply`);
+      console.info("[Gitlab Extended] Gave up waiting for CodeRabbit to reply");
     }
   };
 
@@ -160,7 +136,6 @@ export const sendCodeRabbitApprove = async (command: string) => {
     body: { body: command },
   });
   const note = (await response.json()) as Note;
-  log(`posted "${command}" as comment ${note.id}`);
 
   watchForCodeRabbitReply(note.id, getMentionedUsername(command));
 };
