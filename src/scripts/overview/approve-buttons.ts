@@ -6,12 +6,21 @@ import {
   unapprove,
 } from "./approval-state";
 import { sendCodeRabbitApprove } from "./coderabbit";
+import {
+  DetailedMergeStatus,
+  getMergeState,
+  loadMergeState,
+  merge,
+} from "./merge-state";
 
 const MARKER = "data-gitlab-extended-approve";
 const MAIN_BUTTON_MARKER = "data-gitlab-extended-approve-main";
+const MERGE_ITEM_MARKER = "data-gitlab-extended-merge-item";
 
 const APPROVALS_SELECTOR = ".js-mr-approvals";
 const NATIVE_APPROVE_SELECTOR = `${APPROVALS_SELECTOR} [data-testid="approve-button"]`;
+// The merge button in the merge widget, only there when the MR can be merged
+const NATIVE_MERGE_SELECTOR = '.mr-state-widget [data-testid="merge-button"]';
 // The right-hand side of the approvals bar, which holds "Assign reviewers"
 const APPROVALS_ACTIONS_SELECTOR = `${APPROVALS_SELECTOR} .mr-widget-body .media-body + div`;
 
@@ -21,6 +30,14 @@ const CODERABBIT_COMMAND_KEY = "__gitlab-extended-coderabbit_approve_comment";
 const DEFAULT_CODERABBIT_COMMAND = "@coderabbitai approve";
 
 type Variant = "confirm" | "default";
+
+type DropdownItem = {
+  label: string;
+  description: string;
+  onClick: () => void;
+  // Set on the item, so it can be found and updated later
+  marker?: string;
+};
 
 const createButton = (
   label: string,
@@ -98,7 +115,8 @@ const addCodeRabbitButtonToApprovalsBar = (command: string) => {
 // `.gl-new-dropdown` that holds the toggle and its menu.
 const createDisclosureDropdown = (
   toggle: HTMLButtonElement,
-  items: { label: string; description: string; onClick: () => void }[],
+  items: readonly DropdownItem[],
+  onOpen?: () => void,
 ) => {
   const dropdown = document.createElement("div");
   dropdown.classList.add("gl-new-dropdown", "gl-disclosure-dropdown");
@@ -141,6 +159,9 @@ const createDisclosureDropdown = (
     const li = document.createElement("li");
     li.classList.add("gl-new-dropdown-item");
     li.tabIndex = 0;
+    if (item.marker) {
+      li.setAttribute(item.marker, "true");
+    }
 
     const button = document.createElement("button");
     button.type = "button";
@@ -151,7 +172,7 @@ const createDisclosureDropdown = (
     wrapper.classList.add("gl-new-dropdown-item-text-wrapper");
 
     const label = document.createElement("span");
-    label.classList.add("gl-block");
+    label.classList.add("gl-block", "gl-dropdown-item-label");
     label.textContent = item.label;
 
     const description = document.createElement("span");
@@ -160,6 +181,7 @@ const createDisclosureDropdown = (
       "gl-truncate",
       "gl-text-sm",
       "gl-text-subtle",
+      "gl-dropdown-item-description",
     );
     description.textContent = item.description;
     description.title = item.description;
@@ -168,6 +190,9 @@ const createDisclosureDropdown = (
     button.appendChild(wrapper);
 
     const select = () => {
+      if (button.disabled) {
+        return;
+      }
       close();
       item.onClick();
     };
@@ -202,6 +227,7 @@ const createDisclosureDropdown = (
     panel.style.display = "block";
     toggle.setAttribute("aria-expanded", "true");
     document.addEventListener("click", onOutsideClick, true);
+    onOpen?.();
   };
 
   dropdown.onkeydown = (event) => {
@@ -222,6 +248,156 @@ const createDisclosureDropdown = (
 
 const getNativeApproveButton = () =>
   document.querySelector<HTMLButtonElement>(NATIVE_APPROVE_SELECTOR);
+
+const getNativeMergeButton = () =>
+  document.querySelector<HTMLButtonElement>(NATIVE_MERGE_SELECTOR);
+
+const MERGE_BLOCKED_REASONS: Partial<Record<string, string>> = {
+  [DetailedMergeStatus.CiMustPass]: "Pipeline must succeed",
+  [DetailedMergeStatus.NeedRebase]: "Needs a rebase",
+  [DetailedMergeStatus.DraftStatus]: "Still a draft",
+  [DetailedMergeStatus.DiscussionsNotResolved]: "Unresolved threads",
+  [DetailedMergeStatus.NotApproved]: "Not approved yet",
+  [DetailedMergeStatus.RequestedChanges]: "Changes requested",
+  [DetailedMergeStatus.BlockedStatus]: "Blocked by another merge request",
+  [DetailedMergeStatus.NotOpen]: "Merge request isn't open",
+  [DetailedMergeStatus.Checking]: "Checking if it can be merged",
+  [DetailedMergeStatus.Unchecked]: "Checking if it can be merged",
+  [DetailedMergeStatus.Preparing]: "Merge request is being prepared",
+};
+
+type MergeAction = {
+  label: string;
+  description: string;
+  enabled: boolean;
+  conflicts: boolean | null;
+  autoMerge: boolean;
+};
+
+// GitLab's merge button when it's on the page, otherwise what the merge state
+// from the API implies. The description always says whether there are
+// conflicts, as the merge widget hides the merge button when there are.
+const getMergeAction = (): MergeAction => {
+  const state = getMergeState();
+  if (!state) {
+    loadMergeState(syncAllApproveSplitButtons);
+    return {
+      label: "Merge",
+      description: "Checking merge status...",
+      enabled: false,
+      conflicts: null,
+      autoMerge: false,
+    };
+  }
+
+  const conflicts = state.conflicts ? "Has merge conflicts" : "No conflicts";
+
+  const native = getNativeMergeButton();
+  if (native) {
+    return {
+      label: native.textContent?.trim() || "Merge",
+      description: conflicts,
+      enabled: !native.disabled,
+      conflicts: state.conflicts,
+      autoMerge: false,
+    };
+  }
+
+  const status = state.detailedMergeStatus;
+  const autoMerge = status === DetailedMergeStatus.CiStillRunning;
+  const label = autoMerge ? "Set to auto-merge" : "Merge";
+
+  // null when it can be merged; empty when the conflicts already explain it
+  const blockedReason = (() => {
+    if (state.autoMergeEnabled) {
+      return "Auto-merge is already set";
+    }
+    if (!state.canMerge) {
+      return "You can't merge this";
+    }
+    if (status === DetailedMergeStatus.Mergeable || autoMerge) {
+      return null;
+    }
+    if (status === DetailedMergeStatus.Conflict) {
+      return "";
+    }
+    return MERGE_BLOCKED_REASONS[status] ?? "Can't be merged yet";
+  })();
+
+  return {
+    label,
+    description: blockedReason
+      ? `${conflicts}, ${blockedReason.toLowerCase()}`
+      : conflicts,
+    enabled: blockedReason === null,
+    conflicts: state.conflicts,
+    autoMerge,
+  };
+};
+
+const mergeThroughApi = async (group: HTMLElement) => {
+  const action = getMergeAction();
+  if (!action.enabled) {
+    return;
+  }
+
+  setGroupStatus(
+    group,
+    action.autoMerge ? "Setting auto-merge..." : "Merging...",
+  );
+  try {
+    await merge(getMergeState()?.diffHeadSha ?? null, action.autoMerge);
+    setGroupStatus(group, action.autoMerge ? "Auto-merge set" : "Merged");
+  } catch (error) {
+    console.error("[Gitlab Extended] Merging failed", error);
+    setGroupStatus(group, "Merging failed");
+  }
+  setTimeout(() => setGroupStatus(group, null), STATUS_RESET_MS);
+
+  await loadMergeState(syncAllApproveSplitButtons, true);
+};
+
+const onMergeClick = (group: HTMLElement) => {
+  const native = getNativeMergeButton();
+  if (native && !native.disabled) {
+    native.click();
+  } else {
+    mergeThroughApi(group);
+  }
+};
+
+const syncMergeItem = (group: HTMLElement) => {
+  const item = group.querySelector<HTMLElement>(`[${MERGE_ITEM_MARKER}]`);
+  const button = item?.querySelector<HTMLButtonElement>("button");
+  const label = item?.querySelector(".gl-dropdown-item-label");
+  const description = item?.querySelector<HTMLElement>(
+    ".gl-dropdown-item-description",
+  );
+  if (!item || !button || !label || !description) {
+    return;
+  }
+
+  const action = getMergeAction();
+
+  if (label.textContent !== action.label) {
+    label.textContent = action.label;
+  }
+  if (description.textContent !== action.description) {
+    description.textContent = action.description;
+    description.title = action.description;
+  }
+
+  description.classList.toggle("gl-text-danger", action.conflicts === true);
+  description.classList.toggle("gl-text-success", action.conflicts === false);
+  description.classList.toggle("gl-text-subtle", action.conflicts === null);
+
+  const disabled = !action.enabled;
+  if (button.disabled !== disabled) {
+    button.disabled = disabled;
+    item.setAttribute("aria-disabled", String(disabled));
+    label.classList.toggle("gl-text-disabled", disabled);
+  }
+};
 
 const setGroupStatus = (group: HTMLElement, status: string | null) => {
   if (status) {
@@ -283,16 +459,27 @@ const createApproveSplitButton = (command: string) => {
   chevron?.classList.add("gl-new-dropdown-chevron");
   toggle.replaceChildren(chevron ?? document.createTextNode("▾"));
 
-  const dropdown = createDisclosureDropdown(toggle, [
-    {
-      label: "CodeRabbit approve",
-      description: `Comments "${command}"`,
-      onClick: () =>
-        runCodeRabbitCommand(command, (status) =>
-          setGroupStatus(group, status),
-        ),
-    },
-  ]);
+  const dropdown = createDisclosureDropdown(
+    toggle,
+    [
+      {
+        label: "CodeRabbit approve",
+        description: `Comments "${command}"`,
+        onClick: () =>
+          runCodeRabbitCommand(command, (status) =>
+            setGroupStatus(group, status),
+          ),
+      },
+      {
+        label: "Merge",
+        description: "Checking merge status...",
+        onClick: () => onMergeClick(group),
+        marker: MERGE_ITEM_MARKER,
+      },
+    ],
+    // The merge status changes as pipelines run and threads get resolved
+    () => loadMergeState(syncAllApproveSplitButtons, true),
+  );
 
   group.append(main, dropdown);
   return group;
@@ -332,6 +519,8 @@ const syncApproveSplitButton = (group: HTMLElement) => {
   if (!main) {
     return;
   }
+
+  syncMergeItem(group);
 
   const action = getApproveAction();
   const status = group.dataset.status;
