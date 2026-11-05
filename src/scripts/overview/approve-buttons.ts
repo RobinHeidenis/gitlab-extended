@@ -19,8 +19,6 @@ const STATUS_RESET_MS = 3000;
 
 const CODERABBIT_COMMAND_KEY = "__gitlab-extended-coderabbit_approve_comment";
 const DEFAULT_CODERABBIT_COMMAND = "@coderabbitai approve";
-// Earlier versions stored this default; replace it so the new default applies
-const OLD_DEFAULT_CODERABBIT_COMMAND = "@coderabbit approve";
 
 type Variant = "confirm" | "default";
 
@@ -414,11 +412,8 @@ const addApproveSplitButtonsToHeaders = (command: string) => {
 };
 
 const getCodeRabbitCommand = () => {
-  const stored = localStorage.getItem(CODERABBIT_COMMAND_KEY);
   const command =
-    !stored || stored === OLD_DEFAULT_CODERABBIT_COMMAND
-      ? DEFAULT_CODERABBIT_COMMAND
-      : stored;
+    localStorage.getItem(CODERABBIT_COMMAND_KEY) || DEFAULT_CODERABBIT_COMMAND;
   localStorage.setItem(CODERABBIT_COMMAND_KEY, command);
   return command;
 };
