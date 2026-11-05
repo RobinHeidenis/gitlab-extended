@@ -1,3 +1,6 @@
+import { createGitlabIcon } from "../icons/gitlab";
+import { graphql, parseMRUrl } from "../shared/gitlab-api";
+
 interface MRContext {
   projectPath: string;
   iid: string;
@@ -16,50 +19,6 @@ const REVIEWER_BLOCK_SELECTOR =
 
 // Give GitLab's realtime sidebar updates a moment before falling back to a reload
 const SIDEBAR_UPDATE_TIMEOUT_MS = 2000;
-
-const getCsrfToken = () =>
-  document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content ??
-  null;
-
-const parseMRUrl = () => {
-  const match = window.location.pathname.match(
-    /^\/(.+?)\/-\/merge_requests\/(\d+)/,
-  );
-  if (!match) {
-    return null;
-  }
-
-  return { projectPath: match[1]!, iid: match[2]! };
-};
-
-const graphql = async <T>(
-  query: string,
-  variables: Record<string, unknown>,
-): Promise<T> => {
-  const csrfToken = getCsrfToken();
-  if (!csrfToken) {
-    throw new Error("No CSRF token found");
-  }
-
-  const response = await fetch("/api/graphql", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-      "X-CSRF-Token": csrfToken,
-    },
-    body: JSON.stringify({ query, variables }),
-  });
-
-  const json = await response.json();
-  if (!response.ok || json.errors?.length) {
-    throw new Error(
-      `GraphQL request failed: ${JSON.stringify(json.errors ?? json)}`,
-    );
-  }
-
-  return json.data;
-};
 
 let mrContextPromise: Promise<MRContext | null> | null = null;
 
@@ -304,26 +263,19 @@ const addAssignMeAsReviewerButton = (context: MRContext) => {
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 
-// Reuse GitLab's icon sprite so the icon matches the rest of the sidebar,
-// falling back to a hand-drawn X if the sprite can't be found
+// Falls back to a hand-drawn X if GitLab's icon sprite can't be found
 const createCloseIcon = () => {
-  const svg = document.createElementNS(SVG_NS, "svg");
-  svg.classList.add("gl-button-icon", "gl-icon", "s16", "gl-fill-current");
+  const svg =
+    createGitlabIcon("close") ?? document.createElementNS(SVG_NS, "svg");
   // The close glyph looks small next to GitLab's circular reviewer icons, and
   // GitLab's button styles pin the icon's width and height, so scale it instead
   svg.style.transform = "scale(1.35)";
 
-  const spriteHref = document
-    .querySelector("svg.gl-icon use[href*='.svg#']")
-    ?.getAttribute("href");
-
-  if (spriteHref) {
-    const use = document.createElementNS(SVG_NS, "use");
-    use.setAttribute("href", `${spriteHref.split("#")[0]}#close`);
-    svg.appendChild(use);
+  if (svg.hasChildNodes()) {
     return svg;
   }
 
+  svg.classList.add("gl-button-icon", "gl-icon", "s16", "gl-fill-current");
   svg.setAttribute("viewBox", "0 0 16 16");
   const path = document.createElementNS(SVG_NS, "path");
   path.setAttribute("d", "M4 4l8 8M12 4l-8 8");
