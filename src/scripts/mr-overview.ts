@@ -101,7 +101,6 @@ const setupClickEventListeners = () => {
         const header = issue.querySelector("div.note-header-info")!;
         if (header.children.length === 4) {
           header.removeChild(header.children[3]!);
-          showTotalWithoutEmojis();
           return;
         }
 
@@ -119,44 +118,9 @@ const setupClickEventListeners = () => {
         issue.setAttribute(COLLAPSED_BY_MARKER, "gitlab-extended");
 
         toggleResolvedBadge(issue as unknown as HTMLDivElement, false);
-
-        showTotalWithoutEmojis();
       }
     });
   }
-};
-
-const showTotalWithoutEmojis = () => {
-  const totalUnEmojid = document.querySelectorAll(
-    `div[data-discussion-id]:not([data-discussion-resolved]):not(:has(button[data-emoji-name="${EMOJI}"])):has(li[aria-expanded="true"])`,
-  );
-
-  const unresolvedIssuesContainers = document.querySelectorAll<HTMLDivElement>(
-    'div[data-testid="discussions-counter-text"]',
-  );
-  if (!unresolvedIssuesContainers) {
-    return;
-  }
-
-  const counter = unresolvedIssuesContainers[1];
-  if (!counter) {
-    return;
-  }
-
-  // Since a recent version there's a newline in the counter text, so we need to split it and take the first part
-  const totalUnresolvedIssues = counter.innerText.split(" ")[0]?.split("\n")[0];
-
-  const isAllResolved = counter.innerText.startsWith("All threads resolved");
-
-  for (const container of unresolvedIssuesContainers) {
-    const outputText = isAllResolved && totalUnEmojid.length === 0
-      ? "All threads resolved"
-      : `${totalUnEmojid.length} unresolved threads (${totalUnresolvedIssues} total)`;
-
-    (container.firstChild as HTMLElement).textContent = outputText;
-  }
-
-  return true;
 };
 
 const addBadgeToEmojiCollapsedIssues = () => {
@@ -232,7 +196,6 @@ const addButtonsToResolveIssues = (csrfToken: string) => {
         issue as unknown as HTMLDivElement,
         shouldBadgeBeRemoved,
       );
-      showTotalWithoutEmojis();
     };
 
     const firstActionButton = issue.querySelector(
@@ -345,43 +308,9 @@ function setInStorage(key: string, value: string) {
   localStorage.setItem(`__gitlab-extended-${key}`, value);
 }
 
-function setupDiscussionCounterListener() {
-  const observer = new MutationObserver(() => {
-    if (hasDiscussionTotalCounter()) {
-      const success = showTotalWithoutEmojis();
-      if (success) {
-        observer.disconnect();
-      }
-    }
-  });
-
-  observer.observe(document.body, {
-    childList: true,
-    subtree: true,
-  });
-
-  if (hasDiscussionTotalCounter()) {
-    const success = showTotalWithoutEmojis();
-    if (success) {
-      observer.disconnect();
-    }
-  }
-}
-
-function hasDiscussionTotalCounter() {
-  const counters = document.querySelectorAll(
-    'div[data-testid="discussions-counter-text"]',
-  );
-
-  // Mobile and desktop views have different counters, wait for both
-  return counters.length >= 1;
-}
-
 export const setupMROverview = () => {
   addCollapseAllEmojisButtonToPage();
   addViewInJiraButton(JIRA_URL, JIRA_PREFIX);
-
-  setupDiscussionCounterListener();
 
   const observer = new MutationObserver(() => {
     setupClickEventListeners();
