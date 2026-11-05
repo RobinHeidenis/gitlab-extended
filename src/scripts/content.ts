@@ -2,6 +2,7 @@ import { setupDiffStatsPopover } from "./diff/stats-popover";
 import { setupTestFileHeaders } from "./diff/test-file-headers";
 import { setupMRDiff } from "./mr-diff";
 import { setupMROverview } from "./mr-overview";
+import { setupApproveButtons } from "./overview/approve-buttons";
 
 let MROVerviewSetup = false;
 
@@ -49,6 +50,7 @@ const main = () => {
   setupNavigationListener();
   setupDiffStatsPopover();
   setupTestFileHeaders();
+  setupApproveButtons();
 
   if (window.location.pathname.endsWith("diffs")) {
     setTimeout(() => {
