@@ -8,8 +8,11 @@ const TEST_DIRECTORIES = [
   "e2e",
 ];
 
+const TEST_FILE_PATTERN =
+  /(?:[._](?:test|spec)|\.stories)\.|\.test-helper\.tsx?$|(?:^|\/)routeTree\.gen\.ts$/;
+
 export const isTestOrStory = (filePath: string) =>
-  /(?:[._](?:test|spec)|\.stories)\.|\.test-helper\.tsx?$/.test(filePath) ||
+  TEST_FILE_PATTERN.test(filePath) ||
   filePath
     .split("/")
     .slice(0, -1)
