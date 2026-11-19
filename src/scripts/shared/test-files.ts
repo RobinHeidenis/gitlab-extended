@@ -9,7 +9,7 @@ const TEST_DIRECTORIES = [
 ];
 
 export const isTestOrStory = (filePath: string) =>
-  /(?:[._](?:test|spec)|\.stories)\./.test(filePath) ||
+  /(?:[._](?:test|spec)|\.stories)\.|\.test-helper\.tsx?$/.test(filePath) ||
   filePath
     .split("/")
     .slice(0, -1)
