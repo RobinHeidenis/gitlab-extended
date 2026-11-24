@@ -8,6 +8,7 @@
 */
 
 import { isTestOrStory } from "../shared/test-files";
+import { isTranslation } from "../shared/translation-files";
 
 interface FileStat {
   path: string;
@@ -24,6 +25,7 @@ interface StatsSummary {
 interface StatsBreakdown {
   code: StatsSummary;
   tests: StatsSummary;
+  translations: StatsSummary;
   lockfiles: StatsSummary;
   total: StatsSummary;
 }
@@ -112,9 +114,16 @@ const fetchBreakdown = async (
 
   const allFiles: FileStat[] = mr.diffStats ?? [];
   const files = allFiles.filter((f) => !isLockfile(f.path));
+  const tests = files.filter((f) => isTestOrStory(f.path));
+  const translations = files.filter(
+    (f) => !isTestOrStory(f.path) && isTranslation(f.path),
+  );
   return {
-    code: sum(files.filter((f) => !isTestOrStory(f.path))),
-    tests: sum(files.filter((f) => isTestOrStory(f.path))),
+    code: sum(
+      files.filter((f) => !isTestOrStory(f.path) && !isTranslation(f.path)),
+    ),
+    tests: sum(tests),
+    translations: sum(translations),
     lockfiles: sum(allFiles.filter((f) => isLockfile(f.path))),
     total: {
       files: mr.diffStatsSummary.fileCount,
@@ -173,6 +182,9 @@ const renderBreakdown = (popover: HTMLElement, breakdown: StatsBreakdown) => {
   const rows: [string, StatsSummary][] = [
     ["Code", breakdown.code],
     ["Tests & stories", breakdown.tests],
+    ...(breakdown.translations.files > 0
+      ? [["Translations", breakdown.translations] as [string, StatsSummary]]
+      : []),
     // Shown so the rows still add up to GitLab's total
     ...(breakdown.lockfiles.files > 0
       ? [["Lockfiles (ignored)", breakdown.lockfiles] as [string, StatsSummary]]
