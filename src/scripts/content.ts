@@ -3,6 +3,7 @@ import { setupTestFileHeaders } from "./diff/test-file-headers";
 import { setupMRDiff } from "./mr-diff";
 import { setupMROverview } from "./mr-overview";
 import { setupApproveButtons } from "./overview/approve-buttons";
+import { setupStackFallback } from "./overview/stack-fallback";
 
 let MROVerviewSetup = false;
 
@@ -51,6 +52,7 @@ const main = () => {
   setupDiffStatsPopover();
   setupTestFileHeaders();
   setupApproveButtons();
+  setupStackFallback();
 
   if (window.location.pathname.endsWith("diffs")) {
     setTimeout(() => {
